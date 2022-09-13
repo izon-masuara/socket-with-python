@@ -1,24 +1,29 @@
+import threading
 import socket
 
-HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
-PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
+host = "127.0.0.1"
+port = 5555
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.bind((HOST, PORT))
-    s.listen()
-    conn, addr = s.accept()
-    with conn:
-        print(f"Connected by {addr}")
-        while True:
-            data = conn.recv(1024)
-            if not data:
-                break
-            conn.sendall(data)
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind((host, port))
+server.listen()
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    pass  # Use the socket object without calling s.close().
+clients = []
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.bind((HOST, PORT))
-    s.listen()
-    conn, addr = s.accept()
+def handle(client):
+    while True:
+        message = client.recv(1024)
+        for client in clients:
+            client.send(message)
+
+def recieve():
+    while True:
+        client, address = server.accept()
+        print(address)
+        clients.append(client)
+        thread = threading.Thread(target=handle, args=(client,))
+        thread.start()
+
+print("Server running")
+recieve()
